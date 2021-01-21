@@ -44,6 +44,14 @@ terraform apply #type yes
 ```
 
 ## VSCode SSH
+### Integrated terminal (Linux) should start TMUX
+Add this to VSCode settings
+```
+...
+"terminal.integrated.shell.linux": "/home/ec2-user/code-shell.sh",
+...
+```
+### Remote-SSH: Connect to Host
 ```
 ssh -i "remote-dev-box.pem" ec2-user@PUBLIC_DNS -A
 ```
