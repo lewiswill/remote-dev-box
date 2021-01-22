@@ -53,5 +53,6 @@ Add this to VSCode settings
 ```
 ### Remote-SSH: Connect to Host
 ```
-ssh -i "remote-dev-box.pem" ec2-user@PUBLIC_DNS -A
+# being lazy, copy ssh command to clipboard
+./cmd.sh
 ```
