@@ -1,0 +1,31 @@
+#cloud-config
+package_upgrade: true
+
+# write_files:
+#   - content: |
+#       #!/bin/sh
+#       SESSION="vscode`pwd | md5`"
+#       tmux attach-session -d -t $SESSION || tmux new-session -s $SESSION
+#     path: /home/ec2-user/code-shell.sh
+#     # owner: ec2-user:ec2-user
+#     permissions: "0755"
+
+packages:
+  - git
+  - tmux
+  - curl
+
+runcmd:
+  - amazon-linux-extras install -y docker
+  - service docker start
+  - usermod -a -G docker ec2-user
+  - chkconfig docker on
+  - [
+      curl,
+      -L,
+      "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)",
+      -o,
+      /usr/local/bin/docker-compose,
+    ]
+  - chmod +x /usr/local/bin/docker-compose
+  # - [sh, -c, "chown -R ec2-user:ec2-user /home/ec2-user"]

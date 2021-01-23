@@ -9,12 +9,19 @@ terraform {
 
 provider "aws" {
   profile = "default"
-  region  = "eu-west-2" #
+  region  = "eu-west-2"
 }
 
 resource "aws_security_group" "remote-dev-box-sg" {
   name        = "remote-dev-box-sg"
   description = "Remote dev box security group"
+
+  egress {
+      from_port = 0
+      to_port = 0
+      protocol = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+  }
 
   ingress {
     description = "SSH"
@@ -32,23 +39,22 @@ resource "aws_security_group" "remote-dev-box-sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+# data "template_file" "user_data" {
+#   template = file("scripts/cloud-init.yaml")
+# }
+
 resource "aws_instance" "remote-dev-box" {
-  ami                    = "ami-0e80a462ede03e653" # Amazon Linux 2 AMI (HVM), SSD Volume Type - ami-0e80a462ede03e653 (64-bit x86)
-  instance_type          = "t2.micro"
-  key_name               = "remote-dev-box"
-  user_data              = file("user_data.sh")
+  ami           = "ami-0e80a462ede03e653" # Amazon Linux 2 AMI (HVM), SSD Volume Type - ami-0e80a462ede03e653 (64-bit x86)
+  instance_type = "t2.micro"
+  key_name      = "remote-dev-box"
+  # user_data     = data.template_file.user_data.rendered
+
+  root_block_device {
+    volume_size = 20
+  }
+
   vpc_security_group_ids = [aws_security_group.remote-dev-box-sg.id]
-
-  provisioner "file" {
-    source      = "code-shell.sh"
-    destination = "/home/ec2-user/code-shell.sh"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "chmod +x /home/ec2-user/code-shell.sh",
-    ]
-  }
 }
 
 resource "aws_eip" "remote-dev-box-eip" {
