@@ -1,0 +1,11 @@
+#jinja2:lstrip_blocks: True
+
+ {% for host in groups['ec2instances'] %}
+ Host remote-dev-box
+   User ec2-user
+   IdentityFile {{ ec2_key_path }}
+   Hostname {{ hostvars[host]['inventory_hostname']|safe }}
+   ServerAliveInterval 120
+   ForwardAgent yes
+
+ {% endfor %}

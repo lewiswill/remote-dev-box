@@ -1,5 +1,7 @@
 remote-dev-box.pem
 .terraform.lock.hcl
+vars.yml
+ssh_config
 
 # Created by https://www.toptal.com/developers/gitignore/api/terraform
 # Edit at https://www.toptal.com/developers/gitignore?templates=terraform

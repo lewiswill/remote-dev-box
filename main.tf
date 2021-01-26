@@ -40,15 +40,10 @@ resource "aws_security_group" "remote-dev-box-sg" {
   }
 }
 
-# data "template_file" "user_data" {
-#   template = file("scripts/cloud-init.yaml")
-# }
-
 resource "aws_instance" "remote-dev-box" {
   ami           = "ami-0e80a462ede03e653" # Amazon Linux 2 AMI (HVM), SSD Volume Type - ami-0e80a462ede03e653 (64-bit x86)
   instance_type = "t2.micro"
   key_name      = "remote-dev-box"
-  # user_data     = data.template_file.user_data.rendered
 
   root_block_device {
     volume_size = 20

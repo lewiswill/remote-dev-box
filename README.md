@@ -1,13 +1,4 @@
-!!! WIP !!!
-
-Tried to be fancy with cloud-init but it doesn't do what I thought it does. I think.
-
-First time you ssh to the box, you want to run `root_data.sh` (or the contents of) as root and then `user_data.sh` as your user.
-
-Most likely I will employ good ol' ansible further down the line to take care of these tasks.
-
-Have fun!
-# TF Remote Dev Environment
+# Remote Dev Environment
 A remote dev box on AWS for users of MacOS and VSCode.
 
 ## AWS Account
@@ -18,6 +9,12 @@ Get hold of a Key ID and a Key Secret
 brew install awscli
 
 aws configure
+```
+
+## Ansible
+```
+brew install ansible
+ansible-galaxy collection install amazon.aws
 ```
 
 ## AWS Keypair
@@ -74,3 +71,11 @@ Add this to VSCode settings this will open a tmux session when you use vscode's 
 ```
 ### Remote-SSH: Connect to Host
 Use output of `cmd.sh` command
+
+
+Add to
+`$HOME/Library/Application Support/Code/User/settings.json`
+
+```
+"remote.SSH.configFile": "~/Code/dev/tf-remote-dev/ssh_config"
+```

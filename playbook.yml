@@ -1,0 +1,224 @@
+---
+- name: Setup controller
+  hosts: 127.0.0.1
+  connection: local
+  vars:
+    ec2_key_path: "{{ playbook_dir }}/remote-dev-box.pem"
+  tasks:
+    - name: Install pip packages
+      pip:
+        name: "{{ packages }}"
+      vars:
+        packages:
+          - boto
+          - boto3
+      tags:
+      - local
+
+    - name: Create EC2 key
+      ec2_key:
+        name: remote-dev-box
+        force: false
+      register: pem_file
+      tags:
+        - local
+
+    - name: Save pem file
+      copy:
+        content: "{{ pem_file.key.private_key }}"
+        dest: "{{ ec2_key_path }}"
+        mode: 0400
+      when: pem_file.changed
+      tags:
+        - local
+
+    - name: Terraform infrastructure
+      terraform:
+        project_path: ./
+        state: present
+      register: outputs
+
+    # - debug:
+    #     msg: "{{ outputs }}"
+
+    - name: Add instance public ip to host group
+      add_host:
+        name: "{{ outputs.outputs.instance_public_dns.value }}"
+        groups: ec2instances
+
+    # - debug:
+    #     msg: "{{ ec2instances }}"
+
+    - name: Create local ssh config file
+      template:
+        src: templates/ssh_config.j2
+        dest: ssh_config
+        mode: 0644
+
+    - name: Include local ssh config file
+      lineinfile: >
+        dest=~/.ssh/config
+        line="Include {{ playbook_dir }}/ssh_config"
+        create=yes
+
+    - name: Scan remote host key
+      lineinfile:
+        dest: ~/.ssh/known_hosts
+        create: yes
+        state: present
+        line: "{{ lookup('pipe', 'ssh-keyscan {{item }}') }}"
+      loop:
+        - "{{ outputs.outputs.instance_public_dns.value }}"
+      tags:
+        - ssh
+
+    - name: Add key to ssh-agent
+      shell: ssh-add -K remote-dev-box.pem
+
+
+- name: Setup machine
+  hosts: ec2instances
+  remote_user: ec2-user
+  become: yes
+  gather_facts: false
+  tasks:
+    # - name: Wait for instance to become reachable over SSH
+    #   wait_for_connection:
+    #     delay: 60
+    #     timeout: 600
+
+    - name: Update all packages
+      yum:
+        name: "*"
+        state: latest
+        update_only: yes
+
+    - name: Add extras repository
+      shell: yum-config-manager --enable extras
+
+    - name: Ensure a list of yum packages are installed
+      yum:
+        name: "{{ packages }}"
+        state: latest
+        update_cache: yes
+      vars:
+        packages:
+          - gcc
+          - python-pip
+          - yum-utils
+          - device-mapper-persistent-data
+          - lvm2
+          - amazon-linux-extras
+          - tmux
+          - git
+        # - tig
+
+    - name: Install docker-ce (centos) via amazon-linux-extras packages
+      shell: "amazon-linux-extras install docker=18.06.1 -y"
+
+    - name: Enable Docker CE service at startup
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Allow ec2-user to run Docker commands
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Ensure Python pip packages are installed
+      pip:
+        name: "{{ packages }}"
+      vars:
+        packages:
+          - boto
+          - boto3
+          - docker-compose
+
+- name: Setup profile
+  hosts: ec2instances
+  remote_user: ec2-user
+  tasks:
+    - name: Load user vars
+      include_vars:
+        file: vars.yml
+        name: user_vars
+      tags:
+        - git
+    - name: Copy code-shell.sh
+      copy:
+        src: code-shell.sh
+        dest: ~/code-shell.sh
+        mode: 0744
+      tags:
+        - vscode
+
+    - name: Setup VSCode terminal with tmux
+      copy:
+        content: '{"terminal.integrated.shell.linux": "/home/ec2-user/code-shell.sh"}'
+        dest: ~/.vscode-server/data/Machine/settings.json
+      tags:
+        - vscode
+
+    - name: Installing Nvm
+      shell: >
+        curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.37.2/install.sh | bash
+      args:
+        creates: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+      tags:
+        - nodejs
+
+    - name: Source nvm in ~/.profile
+      lineinfile: >
+        dest=~/.profile
+        line="source ~/.nvm/nvm.sh"
+        create=yes
+      tags:
+        - nodejs
+      register: output
+
+    - name: Installing Node LTS
+      shell: |
+        source ~/.nvm/nvm.sh
+        nvm install --lts
+      tags:
+        - nodejs
+
+    - name: Create Code directory
+      file:
+        path: ~/Code
+        state: directory
+        mode: 0755
+
+    - name: Git config
+      git_config:
+        name: "{{ item.name }}"
+        scope: global
+        value: "{{ item.value }}"
+      loop: "{{ user_vars.git_config }}"
+      tags:
+        - git
+
+    - name: Scan and save all SSH host keys
+      lineinfile:
+        dest: ~/.ssh/known_hosts
+        create: yes
+        state: present
+        line: "{{ lookup('pipe', 'ssh-keyscan {{item }}') }}"
+      loop:
+        - github.com
+        - gitlab.com
+        - bitbucket.com
+      tags:
+        - git
+
+    - name: Just ensuring the repo checkout exists
+      git:
+        repo: "{{ item.repo }}"
+        dest: "~/Code/{{ item.dest }}"
+        update: no
+      loop: "{{ user_vars.repos }}"
+      tags:
+        - git
