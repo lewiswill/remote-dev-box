@@ -38,16 +38,10 @@
         state: present
       register: outputs
 
-    # - debug:
-    #     msg: "{{ outputs }}"
-
     - name: Add instance public ip to host group
       add_host:
         name: "{{ outputs.outputs.instance_public_dns.value }}"
         groups: ec2instances
-
-    # - debug:
-    #     msg: "{{ ec2instances }}"
 
     - name: Create local ssh config file
       template:
@@ -155,12 +149,12 @@
       tags:
         - vscode
 
-    - name: Setup VSCode terminal with tmux
-      copy:
-        content: '{"terminal.integrated.shell.linux": "/home/ec2-user/code-shell.sh"}'
-        dest: ~/.vscode-server/data/Machine/settings.json
-      tags:
-        - vscode
+    # - name: Setup VSCode terminal with tmux
+    #   copy:
+    #     content: '{"terminal.integrated.shell.linux": "/home/ec2-user/code-shell.sh"}'
+    #     dest: ~/.vscode-server/data/Machine/settings.json
+    #   tags:
+    #     - vscode
 
     - name: Installing Nvm
       shell: >
