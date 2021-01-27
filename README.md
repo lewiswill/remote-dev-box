@@ -14,7 +14,7 @@ aws configure
 ## Ansible
 ```
 brew install ansible
-ansible-galaxy collection install amazon.aws
+ansible-galaxy install -r requirements.yml
 ```
 
 ## AWS Keypair
