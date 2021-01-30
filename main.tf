@@ -40,7 +40,7 @@ resource "aws_security_group" "remote-dev-box-sg" {
 resource "aws_instance" "remote-dev-box" {
   ami           = "ami-0e80a462ede03e653" # Amazon Linux 2 AMI (HVM), SSD Volume Type - ami-0e80a462ede03e653 (64-bit x86)
   instance_type = var.instance.type
-  key_name      = "remote-dev-box"
+  key_name      = var.ssh_key_name
 
   root_block_device {
     volume_size = 20
