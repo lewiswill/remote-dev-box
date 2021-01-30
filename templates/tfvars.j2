@@ -1,0 +1,12 @@
+#jinja2:lstrip_blocks: True
+env_vars = {
+  aws_access_key_id = "{{ env_vars.AWS_ACCESS_KEY_ID }}"
+  aws_secret_access_key = "{{ env_vars.AWS_SECRET_ACCESS_KEY }}"
+  aws_region = "{{ env_vars.AWS_REGION }}"
+}
+
+ssh_key_name = "{{ host_name }}"
+
+instance = {{ instance | to_json }}
+
+open_ports = {{ open_ports | to_json }}

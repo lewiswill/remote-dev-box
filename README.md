@@ -33,32 +33,34 @@ aws configure
 ## Terraform
 We will use [Terraform](https://www.terraform.io) to set up the infrastructure for our remote dev box.
 
-Firstly install Terraform
-```
-brew install terraform
-```
-Import dependencies
-```
-terraform init
-```
-
 ## Ansible
 We will use [Ansible](https://www.ansible.com) to install packages and configuration on both the remote server and our local machine.
 
-Install ansible
+## Install Terraform and Ansible
 ```
-brew install ansible
+brew install ansible terraform
 ```
-Install ansible requirements
+
+## Github
+Get an access token from [Github](https://github.com/settings/tokens/new).
+We will be needing this so that your remote box can connect to your private repos on Github.
+For more info click [here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token)
+
+## Set up *your* requirements
+Run the following two commands.
 ```
-ansible-galaxy install -r requirements.yml
+cp host_vars/localhost.yml.example host_vars/localhost.yml
+cp host_vars/remore.yml.example host_vars/remote.yml
 ```
+Then open `host_vars/localhost.yaml` and replace the fields with "\*\*PLEASE FILL IN\*\*".
+
+Head to `host_vars/remote.yaml` and fill in with your git details and repos you want to check out.
 
 ## READY, SET, GO! 💨
 After entering the following command, the following things will happen:
 * Local box
   * additional pip packages will be installed (needed for the aws tasks)
-  * a key pair will be generated on AWS, the private part will be downloaded locally
+  * a key pair will be generated and the public part will be uploaded on AWS and Github
 * Remote box
   * box set up with as t2.micro with 20GB block storage
   * [security group](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html) set up with ports 22 and 80 accessible from anywhere
@@ -71,7 +73,7 @@ After entering the following command, the following things will happen:
   * git clone repositories
 
   ```
-  ansible-playbook playbook.yml
+  ./run.sh
   ```
 
 ## Connect to box
@@ -82,11 +84,12 @@ After entering the following command, the following things will happen:
 
 Boom 💥  you're in!
 
-## Bonus round
+If you prefer regular ssh, just run `./ssh.sh`
+<!-- ## Bonus round
 ### VSCode integrated terminal (Linux) should start TMUX
 Add this to VSCode settings this will open a tmux session when you use vscode's integrated terminal on the remote host. Great for long running processes.
 ```
 ...
 "terminal.integrated.shell.linux": "/home/ec2-user/code-shell.sh",
 ...
-```
+``` -->

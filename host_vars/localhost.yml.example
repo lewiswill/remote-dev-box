@@ -1,0 +1,23 @@
+---
+# this is used for the hostname in ssh_config and for the pem key
+host_name: remote-dev-box
+
+remote_user: ec2-user
+
+env_vars:
+  AWS_ACCESS_KEY_ID: **PLEASE FILL IN**
+  AWS_SECRET_ACCESS_KEY: **PLEASE FILL IN**
+  AWS_REGION: eu-west-2
+
+github_access_token: **PLEASE FILL IN**
+
+remote_dev_box_key_path: "{{ playbook_dir }}/{{ host_name }}-key"
+
+instance: {
+  type: t2.micro
+}
+
+open_ports:
+  # you might want to restrict access on different ports and by CIDR block
+  - { description: "SSH", port: 22, cidr_blocks: ["0.0.0.0/0"] }
+  - { description: "HTTP", port: 80, cidr_blocks: ["0.0.0.0/0"] }

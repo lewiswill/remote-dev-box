@@ -1,0 +1,12 @@
+---
+git_config:
+  - { name: "pull.rebase", value: "true" }
+  # notice the single quotes for the string values
+  - { name: "user.name", value: "'User Name'" }
+  - { name: "user.email", value: "'user email'" }
+
+repos:
+  - {
+      dest: "dockercloud-hello-world",
+      repo: "git@github.com:docker-archive/dockercloud-hello-world.git",
+    }

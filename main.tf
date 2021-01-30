@@ -8,13 +8,25 @@ terraform {
 }
 
 provider "aws" {
-  profile = "default"
-  region  = "eu-west-2"
+  region     = var.env_vars.aws_region
+  access_key = var.env_vars.aws_access_key_id
+  secret_key = var.env_vars.aws_secret_access_key
 }
 
 resource "aws_security_group" "remote-dev-box-sg" {
   name        = "remote-dev-box-sg"
   description = "Remote dev box security group"
+
+  dynamic "ingress" {
+    for_each = var.open_ports
+    content {
+      description = ingress.value.description
+      from_port   = ingress.value.port
+      to_port     = ingress.value.port
+      protocol    = "tcp"
+      cidr_blocks = ingress.value.cidr_blocks
+    }
+  }
 
   egress {
       from_port = 0
@@ -23,26 +35,11 @@ resource "aws_security_group" "remote-dev-box-sg" {
       cidr_blocks = ["0.0.0.0/0"]
   }
 
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "HTTP"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 }
 
 resource "aws_instance" "remote-dev-box" {
   ami           = "ami-0e80a462ede03e653" # Amazon Linux 2 AMI (HVM), SSD Volume Type - ami-0e80a462ede03e653 (64-bit x86)
-  instance_type = "t2.micro"
+  instance_type = var.instance.type
   key_name      = "remote-dev-box"
 
   root_block_device {

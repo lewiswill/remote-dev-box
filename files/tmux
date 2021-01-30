@@ -1,0 +1,9 @@
+# reload config file (change file location to your the tmux.conf you want to use)
+bind r source-file ~/.tmux.conf
+
+set -g mode-keys vi
+set -g status-keys vi
+
+bind '"' split-window -c "#{pane_current_path}"
+bind % split-window -hc "#{pane_current_path}"
+bind c new-window -c "#{pane_current_path}"

@@ -1,50 +1,68 @@
 ---
 - name: Setup controller
-  hosts: 127.0.0.1
+  hosts: localhost
   connection: local
-  vars:
-    ec2_key_path: "{{ playbook_dir }}/remote-dev-box.pem"
   tasks:
+    - name: Set environment variables
+      command: env
+      environment: "{{ env_vars }}"
+
+    - name: "Ensure ssh key exists"
+      community.crypto.openssh_keypair:
+        path: "{{ remote_dev_box_key_path }}"
+        # AWS only supports RSA keys
+        type: rsa
+        mode: 0400
+
+    - name: Create terraform vars file
+      ansible.builtin.template:
+        src: templates/tfvars.j2
+        dest: terraform.tfvars
+      vars:
+        inventory_hostname: "{{ hostvars[groups['ec2instances'][0]['inventory_hostname'] }}"
+
     - name: Install pip packages
       pip:
         name: "{{ packages }}"
       vars:
         packages:
+          # botox are needed for AWS
           - boto
           - boto3
       tags:
-      - local
+        - local
 
-    - name: Create EC2 key
-      ec2_key:
-        name: remote-dev-box
+    - name: Upload public key
+      amazon.aws.ec2_key:
+        aws_access_key: "{{ env_vars.AWS_ACCESS_KEY_ID }}"
+        aws_secret_key: "{{ env_vars.AWS_SECRET_ACCESS_KEY }}"
+        region: "{{ env_vars.AWS_REGION }}"
+        name: "{{ host_name }}"
+        key_material: "{{ lookup('file', '{{ remote_dev_box_key_path }}.pub') }}"
         force: false
-      register: pem_file
       tags:
         - local
 
-    - name: Save pem file
-      copy:
-        content: "{{ pem_file.key.private_key }}"
-        dest: "{{ ec2_key_path }}"
-        mode: 0400
-      when: pem_file.changed
-      tags:
-        - local
+    - name: Terraform init
+      shell: terraform init
+      args:
+        creates: .terraform
 
-    - name: Terraform infrastructure
-      terraform:
+    - name: Terraform apply
+      community.general.terraform:
         project_path: ./
         state: present
       register: outputs
 
     - name: Add instance public ip to host group
-      add_host:
-        name: "{{ outputs.outputs.instance_public_dns.value }}"
-        groups: ec2instances
+      ansible.builtin.add_host:
+        name: remote
+        ansible_host: "{{ outputs.outputs.instance_public_dns.value }}"
+        ansible_user: "{{ remote_user }}"
+        remote_dev_box_key_path: "{{ remote_dev_box_key_path }}"
 
     - name: Create local ssh config file
-      template:
+      ansible.builtin.template:
         src: templates/ssh_config.j2
         dest: ssh_config
         mode: 0644
@@ -55,32 +73,47 @@
         line="Include {{ playbook_dir }}/ssh_config"
         create=yes
 
-    - name: Scan remote host key
-      lineinfile:
-        dest: ~/.ssh/known_hosts
-        create: yes
-        state: present
-        line: "{{ lookup('pipe', 'ssh-keyscan {{item }}') }}"
-      loop:
-        - "{{ outputs.outputs.instance_public_dns.value }}"
-      tags:
-        - ssh
-
     - name: Add key to ssh-agent
-      shell: ssh-add -K remote-dev-box.pem
+      shell: "ssh-add -K {{ remote_dev_box_key_path }}"
+
+    - name: Read SSH public key to authorize
+      ansible.builtin.shell: "cat {{ remote_dev_box_key_path }}.pub"
+      register: ssh_pub_key
+
+    - name: Authorize key with GitHub
+      local_action:
+        module: github_key
+        name: "Access Key for {{ host_name }}"
+        token: "{{ github_access_token }}"
+        pubkey: "{{ ssh_pub_key.stdout }}"
+
+- name: Wait for instance to become reachable over SSH
+  hosts: remote
+  gather_facts: false
+  tasks:
+    - wait_for_connection:
+
+- name: Scan remote host key
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+  - lineinfile:
+      dest: ~/.ssh/known_hosts
+      create: yes
+      state: present
+      line: "{{ lookup('pipe', 'ssh-keyscan {{ item }}') }}"
+    loop:
+      - "{{ outputs.outputs.instance_public_dns.value }}"
+    tags:
+      - ssh
 
 
 - name: Setup machine
-  hosts: ec2instances
-  remote_user: ec2-user
+  hosts: remote
   become: yes
   gather_facts: false
   tasks:
-    # - name: Wait for instance to become reachable over SSH
-    #   wait_for_connection:
-    #     delay: 60
-    #     timeout: 600
-
     - name: Update all packages
       yum:
         name: "*"
@@ -105,6 +138,8 @@
           - amazon-linux-extras
           - tmux
           - git
+          - zsh
+          - htop
         # - tig
 
     - name: Install docker-ce (centos) via amazon-linux-extras packages
@@ -116,9 +151,9 @@
         state: started
         enabled: yes
 
-    - name: Allow ec2-user to run Docker commands
+    - name: Allow remote user to run Docker commands
       user:
-        name: ec2-user
+        name: "{{ ansible_user }}"
         groups: docker
         append: yes
 
@@ -131,30 +166,65 @@
           - boto3
           - docker-compose
 
+    - name: set zsh as the default shell
+      user:
+        name: "{{ ansible_user }}"
+        shell: /usr/bin/zsh
+
+    - name: Set authorised key
+      ansible.posix.authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        key: "{{ lookup('file', '{{ remote_dev_box_key_path }}.pub') }}"
+
 - name: Setup profile
-  hosts: ec2instances
-  remote_user: ec2-user
+  hosts: remote
   tasks:
-    - name: Load user vars
-      include_vars:
-        file: vars.yml
-        name: user_vars
+    - name: Copy ssh private key
+      ansible.builtin.copy:
+        src: "{{ remote_dev_box_key_path }}"
+        dest: ~/.ssh/id_rsa
+        mode: 0600
       tags:
-        - git
+        - ssh
+
+    - name: Copy dot files
+      ansible.builtin.copy:
+        src: "files/{{ item }}"
+        dest: "~/.{{ item }}"
+      loop:
+        - tmux
+        - zshrc
+      tags:
+        - shell
+
     - name: Copy code-shell.sh
-      copy:
+      ansible.builtin.copy:
         src: code-shell.sh
         dest: ~/code-shell.sh
         mode: 0744
       tags:
         - vscode
 
-    # - name: Setup VSCode terminal with tmux
-    #   copy:
-    #     content: '{"terminal.integrated.shell.linux": "/home/ec2-user/code-shell.sh"}'
-    #     dest: ~/.vscode-server/data/Machine/settings.json
-    #   tags:
-    #     - vscode
+    - name: Create VSCode data directory
+      ansible.builtin.file:
+        path: ~/.vscode-server/data/Machine
+        state: directory
+      tags:
+        - vscode
+
+    - name: Setup VSCode terminal with tmux
+      ansible.builtin.copy:
+        content: |
+          {"terminal.integrated.shell.linux": "/home/{{ ansible_user }}/code-shell.sh"}
+        dest: ~/.vscode-server/data/Machine/settings.json
+      tags:
+        - vscode
+
+    - name: Install Oh My ZSH
+      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+      args:
+        creates: "/home/{{ ansible_user }}/.oh-my-zsh"
 
     - name: Installing Nvm
       shell: >
@@ -181,7 +251,7 @@
         - nodejs
 
     - name: Create Code directory
-      file:
+      ansible.builtin.file:
         path: ~/Code
         state: directory
         mode: 0755
@@ -191,7 +261,7 @@
         name: "{{ item.name }}"
         scope: global
         value: "{{ item.value }}"
-      loop: "{{ user_vars.git_config }}"
+      loop: "{{ git_config }}"
       tags:
         - git
 
@@ -213,6 +283,6 @@
         repo: "{{ item.repo }}"
         dest: "~/Code/{{ item.dest }}"
         update: no
-      loop: "{{ user_vars.repos }}"
+      loop: "{{ repos }}"
       tags:
         - git
