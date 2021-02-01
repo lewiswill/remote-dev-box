@@ -50,7 +50,7 @@ For more info click [here](https://docs.github.com/en/github/authenticating-to-g
 Run the following two commands.
 ```
 cp host_vars/localhost.yml.example host_vars/localhost.yml
-cp host_vars/remore.yml.example host_vars/remote.yml
+cp host_vars/remote.yml.example host_vars/remote.yml
 ```
 Then open `host_vars/localhost.yaml` and replace the fields with "\*\*PLEASE FILL IN\*\*".
 
