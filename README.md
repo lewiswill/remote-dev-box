@@ -9,6 +9,9 @@ So... I want to use the remote ssh plugin of VSCode on MacOS to connect to an EC
 I also like `.zshrc` for my terminal and I want to setup `tmux` in case my connection drops and my `docker-compose` stack stops.
 Oh, and I live in London, so that's the datacenter location I want.
 
+## VSCode Remote SSH extension
+Install the [Remote SSH](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) extension
+
 ## AWS account
 Before you do anything, you need to [create an account on AWS](https://portal.aws.amazon.com/billing/signup#/start)
 
