@@ -234,14 +234,16 @@
       tags:
         - nodejs
 
-    - name: Source nvm in ~/.profile
-      lineinfile: >
-        dest=~/.profile
-        line="source ~/.nvm/nvm.sh"
-        create=yes
+    - name: Source nvm in ~/.zshrc
+      ansible.builtin.lineinfile:
+        dest: ~/.zshrc
+        line: "{{ item }}"
+        create: yes
+      loop:
+        -  export NVM_DIR=~/.nvm
+        - "[ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\""
       tags:
         - nodejs
-      register: output
 
     - name: Installing Node LTS
       shell: |
