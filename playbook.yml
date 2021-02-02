@@ -68,10 +68,10 @@
         mode: 0644
 
     - name: Include local ssh config file
-      lineinfile: >
-        dest=~/.ssh/config
-        line="Include {{ playbook_dir }}/ssh_config"
-        create=yes
+      lineinfile:
+        dest: ~/.ssh/config
+        line: "Include {{ playbook_dir }}/ssh_config"
+        create: yes
 
     - name: Add key to ssh-agent
       shell: "ssh-add -K {{ remote_dev_box_key_path }}"
