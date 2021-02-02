@@ -5,3 +5,5 @@
    Hostname {{ outputs.outputs.instance_public_dns.value|safe }}
    ServerAliveInterval 120
    ForwardAgent yes
+   # This creates a local forward from localhost port 8080 to remote host port 80
+   #LocalForward 8080 {{ outputs.outputs.instance_public_dns.value|safe }}:80
