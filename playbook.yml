@@ -17,7 +17,7 @@
     - name: Create terraform vars file
       ansible.builtin.template:
         src: templates/tfvars.j2
-        dest: terraform.tfvars
+        dest: terraform/terraform.tfvars
       vars:
         inventory_hostname: "{{ hostvars[groups['ec2instances'][0]['inventory_hostname'] }}"
 
@@ -43,14 +43,9 @@
       tags:
         - local
 
-    - name: Terraform init
-      shell: terraform init
-      args:
-        creates: .terraform
-
     - name: Terraform apply
       community.general.terraform:
-        project_path: ./
+        project_path: ./terraform
         state: present
       register: outputs
 
