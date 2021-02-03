@@ -1,6 +1,16 @@
+resource "aws_vpc" "remote-dev-box-vpc" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = var.ssh_key_name
+  }
+}
+
+
 resource "aws_security_group" "remote-dev-box-sg" {
   name        = "remote-dev-box-sg"
   description = "Remote dev box security group"
+  vpc_id      = aws_vpc.remote-dev-box-vpc.id
 
   dynamic "ingress" {
     for_each = var.open_ports
@@ -20,6 +30,9 @@ resource "aws_security_group" "remote-dev-box-sg" {
       cidr_blocks = ["0.0.0.0/0"]
   }
 
+  tags = {
+    Name = var.ssh_key_name
+  }
 }
 
 resource "aws_instance" "remote-dev-box" {
@@ -32,6 +45,10 @@ resource "aws_instance" "remote-dev-box" {
   }
 
   vpc_security_group_ids = [aws_security_group.remote-dev-box-sg.id]
+
+    tags = {
+      Name = var.ssh_key_name
+  }
 }
 
 resource "aws_eip" "remote-dev-box-eip" {
