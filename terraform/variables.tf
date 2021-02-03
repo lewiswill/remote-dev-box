@@ -8,6 +8,7 @@ variable "env_vars" {
 
 variable "instance" {
   type = object({
+    ami = string
     type = string
   })
 }
@@ -23,3 +24,8 @@ variable "open_ports" {
     cidr_blocks = list(string)
   }))
 }
+
+variable "domain_name" {
+  type = string
+}
+

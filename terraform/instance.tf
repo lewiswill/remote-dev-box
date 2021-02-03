@@ -1,18 +1,3 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 2.70"
-    }
-  }
-}
-
-provider "aws" {
-  region     = var.env_vars.aws_region
-  access_key = var.env_vars.aws_access_key_id
-  secret_key = var.env_vars.aws_secret_access_key
-}
-
 resource "aws_security_group" "remote-dev-box-sg" {
   name        = "remote-dev-box-sg"
   description = "Remote dev box security group"
@@ -52,12 +37,4 @@ resource "aws_instance" "remote-dev-box" {
 resource "aws_eip" "remote-dev-box-eip" {
   instance = aws_instance.remote-dev-box.id
   vpc      = true
-}
-
-output "instance_public_dns" {
-  value = aws_eip.remote-dev-box-eip.public_dns
-}
-
-output "instance_public_ip" {
-  value = aws_eip.remote-dev-box-eip.public_ip
 }
