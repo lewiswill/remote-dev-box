@@ -93,22 +93,6 @@
   tasks:
     - wait_for_connection:
 
-- name: Scan remote host key
-  hosts: localhost
-  connection: local
-  gather_facts: false
-  tasks:
-  - lineinfile:
-      dest: ~/.ssh/known_hosts
-      create: yes
-      state: present
-      line: "{{ lookup('pipe', 'ssh-keyscan {{ item }}') }}"
-    loop:
-      - "{{ outputs.outputs.instance_public_dns.value }}"
-    tags:
-      - ssh
-
-
 - name: Setup machine
   hosts: remote
   become: yes
