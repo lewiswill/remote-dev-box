@@ -77,7 +77,7 @@ resource "aws_instance" "remote-dev-box" {
     volume_size = 20
   }
 
-  security_groups = [aws_security_group.remote-dev-box-sg.id]
+  vpc_security_group_ids = [aws_security_group.remote-dev-box-sg.id]
   subnet_id = aws_subnet.remote-dev-box-subnet.id
 
     tags = {
