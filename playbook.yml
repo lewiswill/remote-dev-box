@@ -123,6 +123,8 @@
 
     - name: Install docker-ce (centos) via amazon-linux-extras packages
       shell: "amazon-linux-extras install docker=18.06.1 -y"
+      args:
+        creates: /usr/bin/docker
 
     - name: Enable Docker CE service at startup
       service:
@@ -167,6 +169,19 @@
       tags:
         - ssh
 
+    - name: Install Oh My ZSH
+      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+      args:
+        creates: "/home/{{ ansible_user }}/.oh-my-zsh"
+
+    - name: Installing Nvm
+      shell: >
+        curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.37.2/install.sh | bash
+      args:
+        creates: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+      tags:
+        - nodejs
+
     - name: Copy dot files
       ansible.builtin.copy:
         src: "files/{{ item }}"
@@ -185,6 +200,15 @@
       tags:
         - vscode
 
+    - name: Installing Node LTS
+      shell: |
+        source ~/.nvm/nvm.sh
+        nvm install v14.15.4
+      args:
+        creates: ~/.nvm/versions/node/v14.15.4
+      tags:
+        - nodejs
+
     - name: Create VSCode data directory
       ansible.builtin.file:
         path: ~/.vscode-server/data/Machine
@@ -199,37 +223,6 @@
         dest: ~/.vscode-server/data/Machine/settings.json
       tags:
         - vscode
-
-    - name: Install Oh My ZSH
-      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-      args:
-        creates: "/home/{{ ansible_user }}/.oh-my-zsh"
-
-    - name: Installing Nvm
-      shell: >
-        curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.37.2/install.sh | bash
-      args:
-        creates: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
-      tags:
-        - nodejs
-
-    - name: Source nvm in ~/.zshrc
-      ansible.builtin.lineinfile:
-        dest: ~/.zshrc
-        line: "{{ item }}"
-        create: yes
-      loop:
-        -  export NVM_DIR=~/.nvm
-        - "[ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\""
-      tags:
-        - nodejs
-
-    - name: Installing Node LTS
-      shell: |
-        source ~/.nvm/nvm.sh
-        nvm install --lts
-      tags:
-        - nodejs
 
     - name: Create Code directory
       ansible.builtin.file:
