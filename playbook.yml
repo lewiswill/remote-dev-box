@@ -248,7 +248,7 @@
       loop:
         - github.com
         - gitlab.com
-        - bitbucket.com
+        - bitbucket.org
       tags:
         - git
 
