@@ -62,6 +62,12 @@
         dest: ssh_config
         mode: 0644
 
+    - name: Create ssh.sh
+      ansible.builtin.template:
+        src: templates/ssh.j2
+        dest: ssh.sh
+        mode: 0744
+
     - name: Include local ssh config file
       lineinfile:
         dest: ~/.ssh/config
