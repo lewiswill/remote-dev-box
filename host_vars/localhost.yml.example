@@ -20,6 +20,10 @@ instance: {
   type: t2.micro
 }
 
+# if attaching own VPC make sure it has an IGW attached
+vpc_id: "false"
+igw_id: "false"
+
 open_ports:
   # you might want to restrict access on different ports and by CIDR block
   - { description: "SSH", port: 22, cidr_blocks: ["0.0.0.0/0"] }

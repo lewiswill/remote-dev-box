@@ -1,4 +1,10 @@
+locals {
+  reuseVPC = var.vpc_id != "false"
+}
+
 resource "aws_vpc" "remote-dev-box-vpc" {
+  count = local.reuseVPC ? 0 : 1
+
   cidr_block = "10.1.0.0/16"
 
   tags = {
@@ -7,7 +13,9 @@ resource "aws_vpc" "remote-dev-box-vpc" {
 }
 
 resource "aws_internet_gateway" "remote-dev-box-igw" {
-  vpc_id = aws_vpc.remote-dev-box-vpc.id
+  count = local.reuseVPC ? 0 : 1
+
+  vpc_id = aws_vpc.remote-dev-box-vpc[0].id
 
   tags = {
     Name = var.ssh_key_name
@@ -15,7 +23,7 @@ resource "aws_internet_gateway" "remote-dev-box-igw" {
 }
 
 resource "aws_subnet" "remote-dev-box-subnet" {
-  vpc_id = aws_vpc.remote-dev-box-vpc.id
+  vpc_id = local.reuseVPC ? var.vpc_id : aws_vpc.remote-dev-box-vpc[0].id
   cidr_block = "10.1.0.0/24"
   map_public_ip_on_launch = true
 
@@ -25,10 +33,11 @@ resource "aws_subnet" "remote-dev-box-subnet" {
 }
 
 resource "aws_route_table" "remote-dev-box-subnet-rt" {
-  vpc_id = aws_vpc.remote-dev-box-vpc.id
+  vpc_id = local.reuseVPC ? var.vpc_id : aws_vpc.remote-dev-box-vpc[0].id
+
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.remote-dev-box-igw.id
+    gateway_id = local.reuseVPC ? var.igw_id : aws_internet_gateway.remote-dev-box-igw[0].id
   }
 
   tags = {
@@ -43,7 +52,7 @@ resource "aws_route_table_association" "remote-dev-box-subnet-rta" {
 
 resource "aws_security_group" "remote-dev-box-sg" {
   description = "Remote dev box security group"
-  vpc_id = aws_vpc.remote-dev-box-vpc.id
+  vpc_id = local.reuseVPC ? var.vpc_id : aws_vpc.remote-dev-box-vpc[0].id
 
   dynamic "ingress" {
     for_each = var.open_ports
@@ -80,12 +89,16 @@ resource "aws_instance" "remote-dev-box" {
   vpc_security_group_ids = [aws_security_group.remote-dev-box-sg.id]
   subnet_id = aws_subnet.remote-dev-box-subnet.id
 
-    tags = {
-      Name = var.ssh_key_name
+  tags = {
+    Name = var.ssh_key_name
   }
 }
 
 resource "aws_eip" "remote-dev-box-eip" {
   instance = aws_instance.remote-dev-box.id
   vpc      = true
+
+  tags = {
+    Name = var.ssh_key_name
+  }
 }
