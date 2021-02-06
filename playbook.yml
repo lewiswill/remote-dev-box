@@ -99,6 +99,51 @@
   become: yes
   gather_facts: false
   tasks:
+    # https://www.digitalocean.com/community/tutorials/how-to-add-swap-space-on-ubuntu-18-04
+    - name: Creating a Swap File
+      command:
+        cmd: "fallocate -l {{ swap_in_gb }}G /swapfile"
+        creates: /swapfile
+      register: swap_created
+
+    - name: Make Swap File only accessible to root
+      ansible.builtin.file:
+        path: /swapfile
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Format file as swap and enable swap
+      command:
+        cmd: "{{ item }}"
+      loop:
+        - mkswap /swapfile
+        - swapon /swapfile
+      when: swap_created.changed
+
+    - name: Making the Swap File Permanent
+      lineinfile:
+        dest: /etc/fstab
+        line: /swapfile none swap sw 0 0
+        create: yes
+
+    - name: Tuning Swap Settings
+      lineinfile:
+        dest: /etc/sysctl.conf
+        line: "{{ item }}"
+        create: yes
+      loop:
+        - vm.swappiness=10
+        - vm.vfs_cache_pressure=50
+
+    - name: Start swap as soon as it's created - don't wait for reboot.
+      command:
+        cmd: "{{ item }}"
+      loop:
+        - sysctl vm.swappiness=10
+        - sysctl vm.vfs_cache_pressure=50
+      when: swap_created.changed
+
     - name: Update all packages
       yum:
         name: "*"
@@ -249,8 +294,7 @@
       lineinfile:
         dest: ~/.ssh/known_hosts
         create: yes
-        state: present
-        line: "{{ lookup('pipe', 'ssh-keyscan {{item }}') }}"
+        line: "{{ lookup('pipe', 'ssh-keyscan {{ item }}') }}"
       loop:
         - github.com
         - gitlab.com
