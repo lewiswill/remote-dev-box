@@ -144,6 +144,12 @@
         - sysctl vm.vfs_cache_pressure=50
       when: swap_created.changed
 
+    - name: Increase inotify watch limit
+      lineinfile:
+        dest: /etc/sysctl.conf
+        line: fs.inotify.max_user_watches=524288
+        create: yes
+
     - name: Update all packages
       yum:
         name: "*"
