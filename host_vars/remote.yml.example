@@ -10,3 +10,5 @@ repos:
       dest: "dockercloud-hello-world",
       repo: "git@github.com:docker-archive/dockercloud-hello-world.git",
     }
+
+swap_in_gb: 2
