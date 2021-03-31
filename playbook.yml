@@ -167,7 +167,6 @@
       vars:
         packages:
           - gcc
-          - python-pip
           - yum-utils
           - device-mapper-persistent-data
           - lvm2
@@ -193,14 +192,12 @@
         groups: docker
         append: yes
 
-    - name: Ensure Python pip packages are installed
-      pip:
-        name: "{{ packages }}"
-      vars:
-        packages:
-          - boto
-          - boto3
-          - docker-compose
+    - name: Download docker-compose
+      ansible.builtin.get_url:
+        url: https://github.com/docker/compose/releases/download/1.28.6/docker-compose-Linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: "0755"
+        force: yes
 
     - name: set zsh as the default shell
       user:
