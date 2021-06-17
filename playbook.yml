@@ -47,6 +47,7 @@
       community.general.terraform:
         project_path: ./terraform
         state: present
+        force_init: yes
       register: outputs
 
     - name: Add instance public ip to host group
@@ -167,7 +168,6 @@
       vars:
         packages:
           - gcc
-          - python-pip
           - yum-utils
           - device-mapper-persistent-data
           - lvm2
@@ -179,9 +179,7 @@
         # - tig
 
     - name: Install docker-ce (centos) via amazon-linux-extras packages
-      shell: "amazon-linux-extras install docker=18.06.1 -y"
-      args:
-        creates: /usr/bin/docker
+      shell: "amazon-linux-extras install docker=stable -y"
 
     - name: Enable Docker CE service at startup
       service:
@@ -195,14 +193,12 @@
         groups: docker
         append: yes
 
-    - name: Ensure Python pip packages are installed
-      pip:
-        name: "{{ packages }}"
-      vars:
-        packages:
-          - boto
-          - boto3
-          - docker-compose
+    - name: Download docker-compose
+      ansible.builtin.get_url:
+        url: https://github.com/docker/compose/releases/download/1.28.6/docker-compose-Linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: "0755"
+        force: yes
 
     - name: set zsh as the default shell
       user:
